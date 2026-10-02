@@ -17,7 +17,12 @@ cd "$source_root"
 export QMAKE=qmake6 QML_SOURCES_PATHS="$source_root/app/gui" APPIMAGE_EXTRACT_AND_RUN=1
 export EXTRA_QT_MODULES=waylandcompositor
 export EXTRA_PLATFORM_PLUGINS='libqwayland-egl.so;libqwayland-generic.so'
-linuxdeploy-aarch64.AppImage --appdir "$deploy" --executable "$deploy/usr/bin/aurora" --plugin qt
+# Qt's TLS plugin loads libssl dynamically. Bundling only the linked libcrypto
+# mixes it with newer distro libssl and breaks identity creation on Arch.
+openssl_libdir="$(pkg-config --variable=libdir openssl)"
+linuxdeploy-aarch64.AppImage --appdir "$deploy" --executable "$deploy/usr/bin/aurora" \
+  --library "$openssl_libdir/libssl.so.3" --library "$openssl_libdir/libcrypto.so.3" --plugin qt
+test -f "$deploy/usr/lib/libssl.so.3"
 test -f "$deploy/usr/plugins/platforms/libqwayland-egl.so"
 test -f "$deploy/usr/plugins/platforms/libqwayland-generic.so"
 mkdir -p "$deploy/licenses"

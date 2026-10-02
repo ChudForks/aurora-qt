@@ -9,10 +9,16 @@ Snapdragon laptop: its CPU may differ from the runner's CPU.
 
 ## Reproduce the compatibility test
 
-The Arch ARM64 compatibility workflow downloads the original Linux artifact
-from build 36948165249 and requires SHA-256
+The initial test downloaded the original Linux artifact from build 36948165249,
+with SHA-256
 `d8797827a3bdd2b0fc32fe291fe9b38c5614872eda6b64fbb52ea66fe7023b34`.
-It verifies the official Arch Linux ARM rootfs signature, updates that rootfs,
+It found that Qt loaded the newer system libssl alongside the older bundled
+libcrypto, causing credential creation to fail. The original bundle also omitted
+native Qt Wayland plugins. The corrected recipe includes the matching OpenSSL
+pair and Qt Wayland platform modules; no CPU-specific codec changes were needed.
+
+The workflow builds the corrected tar and validates its exact SHA-256. It
+verifies the official Arch Linux ARM rootfs signature, updates that rootfs,
 and runs on a native AArch64 runner. It records rootfs hash, installed package
 versions, the actual GNU libc version, all ELF dependency checks, Vulkan device,
 PyroWave smoke output, and X11/Wayland startup logs.
