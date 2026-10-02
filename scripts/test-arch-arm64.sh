@@ -87,14 +87,23 @@ x11_result=$?
 set -e
 test "$x11_result" = 124
 if grep -E 'QQmlApplicationEngine failed|Qt Fatal:|could not be initialized|error while loading shared libraries' /test-results/x11-startup.log; then exit 1; fi
+# A nested X11 backend advertises an input seat, like a desktop. Qt 6.4's
+# text-input context crashes with the headless backend's missing input device.
 # Weston uses Arch libraries, rather than the bundle's LD_LIBRARY_PATH.
 export XDG_RUNTIME_DIR=/tmp/aurora-arch-runtime
 mkdir -m 700 "$XDG_RUNTIME_DIR"
-env -u LD_LIBRARY_PATH -u QT_PLUGIN_PATH -u QML2_IMPORT_PATH \
-  weston --backend=headless --renderer=pixman --socket=aurora-test --idle-time=0 \
+env -u LD_LIBRARY_PATH Xvfb :88 -screen 0 1280x720x24 -nolisten tcp > /test-results/wayland-xvfb.log 2>&1 &
+wayland_xvfb_pid=$!
+for attempt in $(seq 1 30); do
+  test -S /tmp/.X11-unix/X88 && break
+  sleep 1
+done
+test -S /tmp/.X11-unix/X88
+env -u LD_LIBRARY_PATH -u QT_PLUGIN_PATH -u QML2_IMPORT_PATH DISPLAY=:88 \
+  weston --backend=x11 --renderer=pixman --socket=aurora-test --idle-time=0 \
   --log=/test-results/weston.log &
 weston_pid=$!
-trap 'kill "$weston_pid" 2>/dev/null || true' EXIT
+trap 'kill "$weston_pid" "$wayland_xvfb_pid" 2>/dev/null || true' EXIT
 for attempt in $(seq 1 30); do
   test -S "$XDG_RUNTIME_DIR/aurora-test" && break
   sleep 1
