@@ -4,7 +4,8 @@
 set -euo pipefail
 test "$(uname -m)" = aarch64
 package=$(realpath "$1")
-test "$(sha256sum "$package" | cut -d' ' -f1)" = d8797827a3bdd2b0fc32fe291fe9b38c5614872eda6b64fbb52ea66fe7023b34
+expected_sha=${2:-d8797827a3bdd2b0fc32fe291fe9b38c5614872eda6b64fbb52ea66fe7023b34}
+test "$(sha256sum "$package" | cut -d' ' -f1)" = "$expected_sha"
 results="$PWD/arch-results"
 mkdir -p "$results"
 sha256sum "$package" > "$results/tested-package.sha256"

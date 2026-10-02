@@ -3,25 +3,64 @@ on:
   workflow_dispatch:
   push:
     branches: [arch-arm64-compat]
-    paths: ['.github/workflows/test-arch-arm64.yml', 'scripts/test-arch-arm64.sh']
+    paths: ['.github/workflows/test-arch-arm64.yml', 'scripts/test-arch-arm64.sh', 'scripts/build-arm64-linux.sh']
 permissions:
   contents: read
   actions: read
 jobs:
+  native-package:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Dependencies including native Qt Wayland
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential qt6-base-dev qt6-declarative-dev libqt6svg6-dev qt6-tools-dev-tools qt6-l10n-tools qt6-wayland libqt6waylandcompositor6 \
+            qml6-module-qtquick-controls qml6-module-qtquick-templates qml6-module-qtquick-layouts qml6-module-qtqml-workerscript \
+            qml6-module-qtquick-window qml6-module-qtquick qml6-module-qtquick-dialogs qml6-module-qtqml-models \
+            libsdl2-dev libsdl2-ttf-dev libssl-dev libopus-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libplacebo-dev \
+            libva-dev libvdpau-dev libdrm-dev libegl1-mesa-dev libgl-dev libwayland-dev libx11-dev libvulkan-dev \
+            glslang-tools spirv-tools python3 xvfb vulkan-tools mesa-vulkan-drivers
+          dpkg-query -W > dependency-versions.txt
+      - name: Native packaging tools
+        run: |
+          mkdir -p tools
+          curl -fL https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-aarch64.AppImage -o tools/linuxdeploy-aarch64.AppImage
+          curl -fL https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-aarch64.AppImage -o tools/linuxdeploy-plugin-qt-aarch64.AppImage
+          chmod +x tools/*.AppImage
+          sha256sum tools/*.AppImage > packaging-tools.sha256
+          echo "$PWD/tools" >> "$GITHUB_PATH"
+      - name: Build corrected native package
+        run: |
+          bash scripts/build-arm64-linux.sh
+          python3 scripts/archive-arm64-source.py build/Aurora-ARM64-source.tar.gz
+          (cd build && sha256sum Aurora-ARM64-source.tar.gz > Aurora-ARM64-source.tar.gz.sha256)
+      - uses: actions/upload-artifact@v6
+        with:
+          name: Aurora-Linux-aarch64-Wayland
+          path: |
+            build/Aurora-*.tar.gz*
+            dependency-versions.txt
+            packaging-tools.sha256
+          if-no-files-found: error
   arch-userspace:
+    needs: native-package
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v5
-      - name: Download exact delivered package
+      - name: Download corrected package
         uses: actions/download-artifact@v6
         with:
-          name: Aurora-Linux-aarch64
-          run-id: 36948165249
-          github-token: ${{ github.token }}
+          name: Aurora-Linux-aarch64-Wayland
           path: original-artifact
       - name: Current Arch Linux ARM userspace
-        run: bash scripts/test-arch-arm64.sh original-artifact/build/Aurora-Linux-aarch64.tar.gz
+        run: |
+          sha=$(cut -d' ' -f1 original-artifact/build/Aurora-Linux-aarch64.tar.gz.sha256)
+          bash scripts/test-arch-arm64.sh original-artifact/build/Aurora-Linux-aarch64.tar.gz "$sha"
       - name: Validation evidence
         if: always()
         uses: actions/upload-artifact@v6

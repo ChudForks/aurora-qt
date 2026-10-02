@@ -15,10 +15,15 @@ make -j"$(nproc)" release
 make INSTALL_ROOT="$deploy" install
 cd "$source_root"
 export QMAKE=qmake6 QML_SOURCES_PATHS="$source_root/app/gui" APPIMAGE_EXTRACT_AND_RUN=1
+export EXTRA_QT_MODULES=waylandcompositor
+export EXTRA_PLATFORM_PLUGINS='libqwayland-egl.so;libqwayland-generic.so'
 linuxdeploy-aarch64.AppImage --appdir "$deploy" --executable "$deploy/usr/bin/aurora" --plugin qt
+test -f "$deploy/usr/plugins/platforms/libqwayland-egl.so"
+test -f "$deploy/usr/plugins/platforms/libqwayland-generic.so"
 mkdir -p "$deploy/licenses"
 cp LICENSE README.md docs/ARM64.md "$deploy/"
 cp docs/VIBEPollo-COMPATIBILITY.md "$deploy/"
+if test -f docs/ARCH-ARM64.md; then cp docs/ARCH-ARM64.md "$deploy/"; fi
 cp pyrowave/LICENSE* "$deploy/licenses/"
 cp pyrowave/external/vk_mem_alloc.h "$deploy/licenses/VulkanMemoryAllocator.h"
 cp pyrowave/src/vk/vk_allocator.cpp "$deploy/licenses/WiVRn-notices.cpp"
