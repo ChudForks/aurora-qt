@@ -12,8 +12,10 @@ uname -a > "$results/runner-kernel.txt"
 arch_root="$RUNNER_TEMP/aurora-arch-root"
 mkdir -p "$arch_root" "$RUNNER_TEMP/aurora-arch-download"
 cd "$RUNNER_TEMP/aurora-arch-download"
-curl -fL --retry 3 https://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz -o rootfs.tar.gz
-curl -fL --retry 3 https://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz.sig -o rootfs.tar.gz.sig
+# The official OS mirror endpoint is HTTP; authenticity is checked against
+# the published signing-key fingerprint before extracting or executing it.
+curl -fL --retry 3 http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz -o rootfs.tar.gz
+curl -fL --retry 3 http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz.sig -o rootfs.tar.gz.sig
 mkdir -m 700 gnupg
 gpg --homedir "$PWD/gnupg" --keyserver hkps://keyserver.ubuntu.com --recv-keys 68B3537F39A313B3E574D06777193F152BDBE6A6
 gpg --homedir "$PWD/gnupg" --status-fd 1 --verify rootfs.tar.gz.sig rootfs.tar.gz > "$results/rootfs-signature.txt" 2>&1
