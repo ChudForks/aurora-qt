@@ -1,0 +1,31 @@
+name: Arch ARM64 compatibility
+on:
+  workflow_dispatch:
+  push:
+    branches: [arch-arm64-compat]
+    paths: ['.github/workflows/test-arch-arm64.yml', 'scripts/test-arch-arm64.sh']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  arch-userspace:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download exact delivered package
+        uses: actions/download-artifact@v6
+        with:
+          name: Aurora-Linux-aarch64
+          run-id: 36948165249
+          github-token: ${{ github.token }}
+          path: original-artifact
+      - name: Current Arch Linux ARM userspace
+        run: bash scripts/test-arch-arm64.sh original-artifact/build/Aurora-Linux-aarch64.tar.gz
+      - name: Validation evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: Arch-ARM64-validation
+          path: arch-results
+          if-no-files-found: error
