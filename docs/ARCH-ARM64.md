@@ -9,6 +9,17 @@ Snapdragon laptop: its CPU may differ from the runner's CPU.
 
 ## Reproduce the compatibility test
 
+Validated native build and Arch userspace test:
+https://github.com/ChudForks/aurora-qt/actions/runs/36952156159
+at source commit e5648e484e10f05b9dcd56c24d8f08e7549835c1.
+The exact tar SHA-256 is
+`ceca1ef8f9e288730264d268c1b123130cfeeea5a31c4dfd602e21af014ef5a4`.
+All 215 packaged native files are ELF64 AArch64. Dependency resolution, 20-second
+X11 and native Wayland GUI startup, first-launch credentials, and PyroWave shader
+pipeline initialization passed with Arch glibc 2.43, Mesa 26.2.3 and software
+Vulkan (llvmpipe LLVM 22.1.8). Physical Snapdragon GPU and streaming remain
+unverified.
+
 The initial test downloaded the original Linux artifact from build 36948165249,
 with SHA-256
 `d8797827a3bdd2b0fc32fe291fe9b38c5614872eda6b64fbb52ea66fe7023b34`.

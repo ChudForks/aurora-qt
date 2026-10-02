@@ -30,6 +30,10 @@ Linux: extract the tar and run `./Aurora-Linux-aarch64/aurora.sh`. This AppDir
 bundle targets Ubuntu 24.04 or a compatible newer ARM64 distribution (glibc
 2.39 baseline); older distributions are not guaranteed. Host GPU drivers,
 EGL/GL/Vulkan ICDs and the display/audio session remain system dependencies.
+The corrected Linux packaging also uses the host's VA-API libraries (libva.so.2,
+libva-drm.so.2, libva-x11.so.2 and libva-wayland.so.2). On Arch Linux ARM install
+libva with the appropriate Mesa/Vulkan drivers; see ARCH-ARM64.md for the tested
+environment and hardware checks.
 X11 and Wayland are compiled in. The archive does not require FUSE.
 
 ## Real-hardware validation procedure
