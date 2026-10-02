@@ -21,7 +21,15 @@ export EXTRA_PLATFORM_PLUGINS='libqwayland-egl.so;libqwayland-generic.so'
 # mixes it with newer distro libssl and breaks identity creation on Arch.
 openssl_libdir="$(pkg-config --variable=libdir openssl)"
 linuxdeploy-aarch64.AppImage --appdir "$deploy" --executable "$deploy/usr/bin/aurora" \
-  --library "$openssl_libdir/libssl.so.3" --library "$openssl_libdir/libcrypto.so.3" --plugin qt
+  --library "$openssl_libdir/libssl.so.3" --library "$openssl_libdir/libcrypto.so.3" \
+  --exclude-library='libva*.so*' --plugin qt
+# VA-API loads distro-specific video drivers. Use the host's matching libva
+# family rather than overriding it with Ubuntu 2.20 (which crashes if a
+# Wayland compositor exposes no wl_drm device). VA-API remains compiled in.
+if compgen -G "$deploy/usr/lib/libva*.so*" > /dev/null; then
+    echo 'VA-API libraries must come from the host distribution' >&2
+    exit 1
+fi
 test -f "$deploy/usr/lib/libssl.so.3"
 test -f "$deploy/usr/plugins/platforms/libqwayland-egl.so"
 test -f "$deploy/usr/plugins/platforms/libqwayland-generic.so"

@@ -15,7 +15,11 @@ with SHA-256
 It found that Qt loaded the newer system libssl alongside the older bundled
 libcrypto, causing credential creation to fail. The original bundle also omitted
 native Qt Wayland plugins. The corrected recipe includes the matching OpenSSL
-pair and Qt Wayland platform modules; no CPU-specific codec changes were needed.
+pair and Qt Wayland platform modules. VA-API libraries come from the host
+distribution so they match its graphics drivers. The bundled Ubuntu libva 2.20
+crashed during Wayland decoder probing when Weston exposed no wl_drm device;
+current Arch libva handles that condition. No CPU-specific codec changes were
+needed.
 
 The workflow builds the corrected tar and validates its exact SHA-256. It
 verifies the official Arch Linux ARM rootfs signature, updates that rootfs,
@@ -24,9 +28,16 @@ versions, the actual GNU libc version, all ELF dependency checks, Vulkan device,
 PyroWave smoke output, and X11/Wayland startup logs.
 
 The test uses Arch userspace in a chroot on the Ubuntu runner's kernel. Xvfb and
-headless Weston check desktop startup; llvmpipe checks software Vulkan. It does
+Weston nested on another Xvfb display check X11 and native Wayland startup;
+llvmpipe checks software Vulkan. The nested compositor supplies a keyboard/mouse
+seat. A compositor without an input seat exposes a null-input-device crash in
+the bundled Qt 6.4 text-input code; that condition is recorded separately. It does
 not boot an Arch kernel, measure laptop performance, exercise an Adreno GPU,
 or establish input/audio/streaming compatibility on a physical laptop.
+
+Use workflow_dispatch on the arch-arm64-compat branch. Leave package_run_id empty
+to build a fresh tar, or specify an existing run containing the
+Aurora-Linux-aarch64-Wayland artifact to repeat validation of the same tar.
 
 ## Snapdragon 8cx Gen 3
 
@@ -38,7 +49,7 @@ provides the Adreno Vulkan driver as vulkan-freedreno.
 For an installed, updated Arch Linux ARM laptop, the relevant userspace tools are:
 
 ```sh
-sudo pacman -Syu mesa vulkan-freedreno vulkan-icd-loader vulkan-tools
+sudo pacman -Syu mesa libva vulkan-freedreno vulkan-icd-loader vulkan-tools
 vulkaninfo --summary
 ```
 
@@ -67,4 +78,6 @@ Sources:
 * https://archlinuxarm.org/packages/aarch64/vulkan-freedreno
 * https://docs.mesa3d.org/drivers/freedreno.html
 * https://docs.mesa3d.org/relnotes/23.1.0.html
+* https://archlinuxarm.org/packages/aarch64/libva
+* https://github.com/intel/libva/blob/2.20.0/va/wayland/va_wayland.c
 * https://psref.lenovo.com/syspool/Sys/PDF/ThinkPad/ThinkPad_X13s_Gen_1/ThinkPad_X13s_Gen_1_Spec.PDF

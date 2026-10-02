@@ -53,7 +53,7 @@ pacman-key --populate archlinuxarm
 pacman -Syu --noconfirm
 pacman -S --noconfirm --needed xorg-server-xvfb xorg-xauth weston \
   vulkan-tools vulkan-swrast mesa libglvnd libx11 libxcb libxkbcommon-x11 \
-  alsa-lib libpulse freetype2 harfbuzz fontconfig ttf-dejavu binutils python gdb
+  libva alsa-lib libpulse freetype2 harfbuzz fontconfig ttf-dejavu binutils python gdb
 pacman -Q > /test-results/arch-package-versions.txt
 cat /etc/os-release > /test-results/arch-os-release.txt
 getconf GNU_LIBC_VERSION > /test-results/arch-glibc.txt
