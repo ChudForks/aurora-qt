@@ -29,7 +29,20 @@ if (Test-Path "$DeployDir/icuuc.dll") { Remove-Item -LiteralPath "$DeployDir/icu
 $VsWhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
 $CrtDir = & $VsWhere -latest -find 'VC/Redist/MSVC/*/arm64/Microsoft.VC*.CRT' | Select-Object -Last 1
 if (!$CrtDir) { throw 'ARM64 Visual C++ runtime not found' }
-Copy-Item "$CrtDir/*.dll" $DeployDir
+# VS also places the x64 emulation companion vcruntime140_1.dll in the ARM64
+# redist directory. Copy only native ARM64 CRT DLLs; the final import audit
+# independently fails if a required dependency is missing.
+foreach ($Dll in Get-ChildItem "$CrtDir/*.dll") {
+    $Reader = [IO.BinaryReader]::new([IO.File]::OpenRead($Dll.FullName))
+    try {
+        $Reader.BaseStream.Position = 0x3c
+        $PeOffset = $Reader.ReadUInt32()
+        $Reader.BaseStream.Position = $PeOffset + 4
+        $Machine = $Reader.ReadUInt16()
+    } finally { $Reader.Dispose() }
+    if ($Machine -eq 0xaa64) { Copy-Item $Dll.FullName $DeployDir }
+    else { Write-Host "Excluding unused emulation companion: $($Dll.Name) machine=$Machine" }
+}
 Copy-Item "$SourceRoot/app/SDL_GameControllerDB/gamecontrollerdb.txt" $DeployDir
 New-Item -ItemType File -Force "$DeployDir/portable.dat" | Out-Null
 Copy-Item "$SourceRoot/LICENSE" $DeployDir

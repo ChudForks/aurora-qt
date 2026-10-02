@@ -50,7 +50,16 @@ jobs:
           repository: KhronosGroup/glslang
           ref: 16.6.0
           path: deps/glslang
+      - name: Restore shader tools
+        id: shader-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            deps/glslang/build/StandAlone/Release/*.exe
+            deps/glslang/build/External/spirv-tools/tools/Release/*.exe
+          key: arm64-glslang-16.6.0-msvc-v1
       - name: Native shader compiler and optimizer
+        if: steps.shader-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           Set-Location deps/glslang
@@ -60,7 +69,16 @@ jobs:
           if ($LASTEXITCODE) { throw 'glslang configure failed' }
           cmake --build build --config Release --parallel 4 --target glslang-standalone spirv-opt spirv-val
           if ($LASTEXITCODE) { throw 'glslang build failed' }
-          Get-ChildItem build -Recurse -Filter spirv-opt.exe | ForEach-Object { $_.DirectoryName } | Add-Content $env:GITHUB_PATH
+      - name: Shader tool path
+        shell: pwsh
+        run: Get-ChildItem deps/glslang/build -Recurse -Filter spirv-opt.exe | ForEach-Object { $_.DirectoryName } | Add-Content $env:GITHUB_PATH
+      - name: Save shader tools
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            deps/glslang/build/StandAlone/Release/*.exe
+            deps/glslang/build/External/spirv-tools/tools/Release/*.exe
+          key: arm64-glslang-16.6.0-msvc-v1
       - uses: actions/checkout@v5
         with:
           repository: KhronosGroup/Vulkan-Loader
@@ -83,6 +101,7 @@ jobs:
         shell: pwsh
         run: |
           $env:QT_QPA_PLATFORM = 'offscreen'
+          $env:QT_QUICK_BACKEND = 'software'
           $p = Start-Process build/Aurora-Windows-ARM64/Aurora.exe -PassThru -WindowStyle Hidden -RedirectStandardOutput build/startup.stdout -RedirectStandardError build/startup.stderr
           Start-Sleep -Seconds 15
           if ($p.HasExited) { Get-Content build/startup.stderr; throw "GUI exited early: $($p.ExitCode)" }
