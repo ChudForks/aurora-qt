@@ -45,6 +45,11 @@ void basic_allocation_traits<vk::Buffer>::destroy(
         VmaAllocation allocation,
         void * mapped)
 {
+	// Default and moved-from allocations can outlive a failed context setup.
+	// They own nothing and must not access the uninitialized VMA singleton.
+	if (!*buffer && !allocation)
+		return;
+
 	VmaAllocator allocator = vk_allocator::instance();
 
 	if (mapped)
@@ -89,6 +94,9 @@ void basic_allocation_traits<vk::Image>::destroy(
         VmaAllocation allocation,
         void * mapped)
 {
+	if (!*image && !allocation)
+		return;
+
 	VmaAllocator allocator = vk_allocator::instance();
 
 	if (mapped)

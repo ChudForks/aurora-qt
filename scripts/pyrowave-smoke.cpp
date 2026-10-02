@@ -2,11 +2,21 @@
 // Native wire-layout and headless Vulkan pipeline initialization test.
 #include "pyrowave_vk.h"
 #include "pyrowave/pyrowave_decoder.h"
+#include "vk/allocation.h"
 #include <cstring>
 #include <iostream>
 
 int main()
 {
+    // Regression: failed Vulkan initialization leaves these empty. Destroying
+    // them must work before the VMA singleton exists (including moved-from).
+    {
+        buffer_allocation buffer;
+        image_allocation image;
+        buffer_allocation moved_buffer(std::move(buffer));
+        image_allocation moved_image(std::move(image));
+    }
+    std::cout << "PASS: empty Vulkan allocations cleaned up without an allocator\n";
     PyroWave::BitstreamSequenceHeader header{};
     header.width_minus_1 = 127;
     header.height_minus_1 = 127;
