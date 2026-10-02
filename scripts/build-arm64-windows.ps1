@@ -14,9 +14,9 @@ New-Item -ItemType Directory -Force $BuildDir,$DeployDir | Out-Null
 $env:PATH = "$QtRoot/bin;$env:PATH"
 Push-Location $BuildDir
 try {
-    Run "$QtRoot/bin/qmake.exe" @("$SourceRoot/moonlight-qt.pro", 'CONFIG+=release', 'CONFIG-=debug', 'PYTHON=python', "PYROWAVE_GLSLANG=$Glslang")
+    Run "$QtRoot/bin/qmake.exe" @('-r', "$SourceRoot/moonlight-qt.pro", 'CONFIG+=release', 'CONFIG-=debug', 'PYTHON=python', "PYROWAVE_GLSLANG=$Glslang")
     if (!(Select-String -Path 'app/Makefile.Release' -Pattern 'HAVE_PYROWAVE=1' -Quiet)) { throw 'PyroWave was disabled' }
-    Run 'nmake.exe' @('/NOLOGO', 'release')
+    Run "$SourceRoot/scripts/jom.exe" @('-j4', 'release')
 } finally { Pop-Location }
 $App = Join-Path $BuildDir 'app/release/Aurora.exe'
 Copy-Item $App $DeployDir

@@ -6,7 +6,7 @@ test "$(uname -m)" = aarch64
 mkdir -p build/arm64-release build/Aurora-Linux-aarch64
 deploy="$source_root/build/Aurora-Linux-aarch64"
 cd build/arm64-release
-qmake6 "$source_root/moonlight-qt.pro" CONFIG+=release CONFIG-=debug PREFIX=/usr
+qmake6 -r "$source_root/moonlight-qt.pro" CONFIG+=release CONFIG-=debug PREFIX=/usr
 grep -q 'HAVE_PYROWAVE=1' app/Makefile.Release
 grep -q 'HAS_WAYLAND' app/Makefile.Release
 grep -q 'HAS_X11' app/Makefile.Release
