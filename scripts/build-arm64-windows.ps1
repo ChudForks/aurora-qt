@@ -23,7 +23,7 @@ Copy-Item $App $DeployDir
 Copy-Item "$SourceRoot/libs/windows/lib/arm64/*.dll" $DeployDir
 Copy-Item "$BuildDir/AntiHooking/release/AntiHooking.dll" $DeployDir
 Copy-Item $Loader "$DeployDir/vulkan-1.dll"
-Run "$QtRoot/bin/windeployqt.exe" @('--release', '--dir', $DeployDir, '--qmldir', "$SourceRoot/app/gui", '--no-compiler-runtime', '--no-opengl-sw', '--no-system-d3d-compiler', '--no-system-dxc-compiler', '--no-ffmpeg', $App)
+Run "$QtRoot/bin/windeployqt.exe" @('--release', '--dir', $DeployDir, '--qmldir', "$SourceRoot/app/gui", '--include-plugins', 'qoffscreen', '--no-compiler-runtime', '--no-opengl-sw', '--no-system-d3d-compiler', '--no-system-dxc-compiler', '--no-ffmpeg', $App)
 # Qt can deploy an emulated host ICU DLL; Windows 11 supplies native ICU.
 if (Test-Path "$DeployDir/icuuc.dll") { Remove-Item -LiteralPath "$DeployDir/icuuc.dll" }
 $VsWhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"

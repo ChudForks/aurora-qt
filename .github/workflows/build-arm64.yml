@@ -102,10 +102,13 @@ jobs:
         run: |
           $env:QT_QPA_PLATFORM = 'offscreen'
           $env:QT_QUICK_BACKEND = 'software'
+          if (!(Test-Path build/Aurora-Windows-ARM64/platforms/qoffscreen.dll)) { throw 'Offscreen Qt plugin missing' }
           $p = Start-Process build/Aurora-Windows-ARM64/Aurora.exe -PassThru -WindowStyle Hidden -RedirectStandardOutput build/startup.stdout -RedirectStandardError build/startup.stderr
           Start-Sleep -Seconds 15
           if ($p.HasExited) { Get-Content build/startup.stderr; throw "GUI exited early: $($p.ExitCode)" }
           Stop-Process -Id $p.Id
+          $log = Get-Content build/startup.stderr -Raw
+          if ($log -match 'Could not find the Qt platform plugin|could not be initialized|QQmlApplicationEngine failed|Qt Fatal:') { throw 'GUI initialization failed; see startup.stderr' }
           'Native ARM64 process remained running for 15s with offscreen Qt. GPU/streaming unverified.' | Set-Content build/startup-result.txt
       - uses: actions/upload-artifact@v6
         with:
