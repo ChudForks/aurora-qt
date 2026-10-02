@@ -36,7 +36,7 @@ sudo mount --rbind /sys "$arch_root/sys"
 sudo mount --make-rslave "$arch_root/sys"
 sudo mount --bind "$results" "$arch_root/test-results"
 cleanup() {
-  sudo chroot "$arch_root" /usr/bin/gpgconf --kill all || true
+  sudo chroot "$arch_root" /usr/bin/gpgconf --homedir /etc/pacman.d/gnupg --kill all || true
   sudo umount "$arch_root/test-results" || true
   sudo umount -R "$arch_root/sys" || true
   sudo umount -R "$arch_root/dev" || true
@@ -53,7 +53,7 @@ pacman-key --populate archlinuxarm
 pacman -Syu --noconfirm
 pacman -S --noconfirm --needed xorg-server-xvfb xorg-xauth weston \
   vulkan-tools vulkan-swrast mesa libglvnd libx11 libxcb libxkbcommon-x11 \
-  alsa-lib libpulse freetype2 harfbuzz fontconfig ttf-dejavu binutils python
+  alsa-lib libpulse freetype2 harfbuzz fontconfig ttf-dejavu binutils python gdb
 pacman -Q > /test-results/arch-package-versions.txt
 cat /etc/os-release > /test-results/arch-os-release.txt
 getconf GNU_LIBC_VERSION > /test-results/arch-glibc.txt
@@ -105,7 +105,12 @@ WAYLAND_DISPLAY=aurora-test QT_QPA_PLATFORM=wayland QT_QUICK_BACKEND=software \
   timeout 20s ./aurora.sh > /test-results/wayland-startup.log 2>&1
 wayland_result=$?
 set -e
-test "$wayland_result" = 124
+if test "$wayland_result" != 124; then
+  env -u LD_LIBRARY_PATH WAYLAND_DISPLAY=aurora-test QT_QPA_PLATFORM=wayland QT_QUICK_BACKEND=software \
+    timeout 40s gdb -batch -ex "set env LD_LIBRARY_PATH=$PWD/usr/lib" -ex run -ex 'thread apply all bt' \
+    --args ./usr/bin/aurora > /test-results/wayland-backtrace.txt 2>&1 || true
+  exit 1
+fi
 if grep -E 'QQmlApplicationEngine failed|Qt Fatal:|could not be initialized|error while loading shared libraries' /test-results/wayland-startup.log; then exit 1; fi
 printf '%s\n' 'PASS: unchanged package dependency resolution, software Vulkan/PyroWave initialization, X11 and Wayland GUI startup in Arch Linux ARM userspace.' \
   'UNVERIFIED: Arch kernel boot, Snapdragon Adreno GPU, real display/input/audio, VibePollo streaming, and performance.' > /test-results/result.txt

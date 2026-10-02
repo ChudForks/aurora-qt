@@ -1,14 +1,17 @@
 name: Arch ARM64 compatibility
 on:
   workflow_dispatch:
-  push:
-    branches: [arch-arm64-compat]
-    paths: ['.github/workflows/test-arch-arm64.yml', 'scripts/test-arch-arm64.sh', 'scripts/build-arm64-linux.sh']
+    inputs:
+      package_run_id:
+        description: Existing run containing Aurora-Linux-aarch64-Wayland; leave empty to rebuild
+        required: false
+        type: string
 permissions:
   contents: read
   actions: read
 jobs:
   native-package:
+    if: inputs.package_run_id == ''
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     steps:
@@ -48,6 +51,7 @@ jobs:
           if-no-files-found: error
   arch-userspace:
     needs: native-package
+    if: always() && (needs.native-package.result == 'success' || needs.native-package.result == 'skipped')
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 35
     steps:
@@ -56,6 +60,8 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: Aurora-Linux-aarch64-Wayland
+          run-id: ${{ inputs.package_run_id || github.run_id }}
+          github-token: ${{ github.token }}
           path: original-artifact
       - name: Current Arch Linux ARM userspace
         run: |
