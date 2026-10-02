@@ -19,6 +19,17 @@ linuxdeploy-aarch64.AppImage --appdir "$deploy" --executable "$deploy/usr/bin/au
 mkdir -p "$deploy/licenses"
 cp LICENSE README.md docs/ARM64.md "$deploy/"
 cp pyrowave/LICENSE* "$deploy/licenses/"
+cp pyrowave/external/vk_mem_alloc.h "$deploy/licenses/VulkanMemoryAllocator.h"
+cp pyrowave/src/vk/vk_allocator.cpp "$deploy/licenses/WiVRn-notices.cpp"
+mkdir -p "$deploy/licenses/distribution"
+for notice in /usr/share/doc/*/copyright; do
+    cp -L "$notice" "$deploy/licenses/distribution/$(basename "$(dirname "$notice")").txt"
+done
+g++ -std=c++20 -O2 -DNDEBUG -DVULKAN_HPP_NO_STRUCT_CONSTRUCTORS \
+  -Ipyrowave/src -Ipyrowave/external -Iapp/streaming/video/pyrowave \
+  scripts/pyrowave-smoke.cpp app/streaming/video/pyrowave/pyrowave_vk.cpp \
+  build/arm64-release/pyrowave/libpyrowave.a $(pkg-config --cflags --libs sdl2) \
+  -lvulkan -ldl -pthread -o "$deploy/usr/bin/pyrowave-smoke"
 cp app/SDL_GameControllerDB/gamecontrollerdb.txt "$deploy/"
 git rev-parse HEAD > "$deploy/SOURCE-COMMIT.txt"
 # This tar contains an AppDir. No FUSE is required for the launcher.
@@ -33,6 +44,13 @@ exec "$root/usr/bin/aurora" "$@"
 EOF
 chmod +x "$deploy/aurora.sh"
 python3 scripts/verify-arm64.py --root "$deploy" --executable "$deploy/usr/bin/aurora" --platform linux --report "$deploy/architecture.json"
+set +e
+"$deploy/usr/bin/pyrowave-smoke" > "$deploy/pyrowave-smoke.log" 2>&1
+smoke_result=$?
+set -e
+cat "$deploy/pyrowave-smoke.log"
+test "$smoke_result" = 0 || test "$smoke_result" = 77
+echo "$smoke_result" > "$deploy/pyrowave-smoke.exit-code"
 ldd "$deploy/usr/bin/aurora" | tee "$deploy/dependencies.txt"
 if grep -q 'not found' "$deploy/dependencies.txt"; then exit 1; fi
 tar -C build -czf build/Aurora-Linux-aarch64.tar.gz Aurora-Linux-aarch64

@@ -5,7 +5,7 @@
 # Enabled from the top-level project via `CONFIG += pyrowave`.
 
 TEMPLATE = lib
-CONFIG += staticlib c++20
+CONFIG += staticlib c++20 debug_and_release
 CONFIG -= qt          # pure C++/Vulkan, no Qt dependency
 TARGET = pyrowave
 

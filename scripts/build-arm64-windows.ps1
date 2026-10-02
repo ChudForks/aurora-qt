@@ -37,6 +37,9 @@ Copy-Item "$SourceRoot/README.md" $DeployDir
 Copy-Item "$SourceRoot/docs/ARM64.md" $DeployDir
 New-Item -ItemType Directory -Force "$DeployDir/licenses" | Out-Null
 Copy-Item "$SourceRoot/pyrowave/LICENSE*" "$DeployDir/licenses"
+Copy-Item "$SourceRoot/pyrowave/external/vk_mem_alloc.h" "$DeployDir/licenses/VulkanMemoryAllocator.h"
+Copy-Item "$SourceRoot/pyrowave/src/vk/vk_allocator.cpp" "$DeployDir/licenses/WiVRn-notices.cpp"
+if (Test-Path "$QtRoot/licenses") { Copy-Item "$QtRoot/licenses" "$DeployDir/licenses/Qt" -Recurse -Force }
 git rev-parse HEAD | Set-Content "$DeployDir/SOURCE-COMMIT.txt"
 Run 'python' @('scripts/verify-arm64.py', '--root', $DeployDir, '--executable', "$DeployDir/Aurora.exe", '--platform', 'windows', '--report', "$DeployDir/architecture.json")
 Compress-Archive -Path "$DeployDir/*" -DestinationPath 'build/Aurora-Windows-ARM64.zip' -Force
