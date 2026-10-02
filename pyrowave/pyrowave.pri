@@ -83,15 +83,14 @@ INCLUDEPATH += $$PYROWAVE_GEN_DIR
 isEmpty(PYTHON): PYTHON = python3
 isEmpty(PYROWAVE_GLSLANG): PYROWAVE_GLSLANG = glslangValidator
 
-PYROWAVE_GEN_CMD = $$PYTHON $$PYROWAVE_ROOT/tools/generate_shaders.py \
-    --shader-dir $$PYROWAVE_ROOT/shaders \
-    --output-dir $$PYROWAVE_GEN_DIR \
-    --glslang $$PYROWAVE_GLSLANG \
+PYROWAVE_GEN_CMD = $$system_quote($$PYTHON) $$system_quote($$PYROWAVE_ROOT/tools/generate_shaders.py) \
+    --shader-dir $$system_quote($$PYROWAVE_ROOT/shaders) \
+    --output-dir $$system_quote($$PYROWAVE_GEN_DIR) \
+    --glslang $$system_quote($$PYROWAVE_GLSLANG) \
     --target-env vulkan1.1 \
     --namespace pyrowave
 # Run it now (qmake time). $$system() discards the script's stderr progress lines.
-PYROWAVE_GEN_LOG = $$system($$PYROWAVE_GEN_CMD)
-!exists($$PYROWAVE_GEN_DIR/pyrowave_shaders.cpp) {
+!system($$PYROWAVE_GEN_CMD) {
     error("PyroWave shader generation failed - ensure Python 3 and glslangValidator are on PATH. Tried: $$PYROWAVE_GEN_CMD")
 }
 

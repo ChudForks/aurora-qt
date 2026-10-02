@@ -538,8 +538,9 @@ pyrowave {
 
     # VMA inside libpyrowave references Vulkan entry points directly, so the
     # final link must pull in the Vulkan loader.
-    win32: LIBS += -lvulkan-1
-    else:  LIBS += -lvulkan
+    # Windows uses vk::raii's dynamic loader and dynamic VMA functions. Do not
+    # import the SDK's x64 loader into an ARM64 application.
+    !win32: LIBS += -lvulkan
 
     INCLUDEPATH += \
         $$PWD/../pyrowave/src \
@@ -565,7 +566,6 @@ pyrowave {
         win32: INCLUDEPATH += $$VULKAN_SDK_ENV/Include
         else:  INCLUDEPATH += $$VULKAN_SDK_ENV/include
         # vulkan-1.lib (the Vulkan loader import library) lives in the SDK's Lib dir.
-        win32: LIBS += -L$$VULKAN_SDK_ENV/Lib
     }
 
     # PyroWave decoder integration sources (Vulkan context + IVideoDecoder).

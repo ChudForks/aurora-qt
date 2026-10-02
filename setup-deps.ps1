@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $Organization = "moonlight-stream"
 $PrebuiltRepo = "moonlight-qt-deps"
 $TargetDir = Join-Path $PSScriptRoot "libs\windows"
-$Assets = @("windows-x64.zip", "windows-ARM64.zip")
+$Assets = @("Windows-x64.zip", "Windows-ARM64.zip")
 $Tag = "v5"
 
 if (Test-Path $TargetDir) {

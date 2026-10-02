@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source_root="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$source_root"
+test "$(uname -m)" = aarch64
+mkdir -p build/arm64-release build/Aurora-Linux-aarch64
+deploy="$source_root/build/Aurora-Linux-aarch64"
+cd build/arm64-release
+qmake6 "$source_root/moonlight-qt.pro" CONFIG+=release CONFIG-=debug PREFIX=/usr
+grep -q 'HAVE_PYROWAVE=1' app/Makefile.Release
+grep -q 'HAS_WAYLAND' app/Makefile.Release
+grep -q 'HAS_X11' app/Makefile.Release
+grep -q 'HAVE_FFMPEG' app/Makefile.Release
+make -j"$(nproc)" release
+make INSTALL_ROOT="$deploy" install
+cd "$source_root"
+export QMAKE=qmake6 QML_SOURCES_PATHS="$source_root/app/gui" APPIMAGE_EXTRACT_AND_RUN=1
+linuxdeploy-aarch64.AppImage --appdir "$deploy" --executable "$deploy/usr/bin/aurora" --plugin qt
+mkdir -p "$deploy/licenses"
+cp LICENSE README.md docs/ARM64.md "$deploy/"
+cp pyrowave/LICENSE* "$deploy/licenses/"
+cp app/SDL_GameControllerDB/gamecontrollerdb.txt "$deploy/"
+git rev-parse HEAD > "$deploy/SOURCE-COMMIT.txt"
+# This tar contains an AppDir. No FUSE is required for the launcher.
+cat > "$deploy/aurora.sh" <<'EOF'
+#!/usr/bin/env sh
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export LD_LIBRARY_PATH="$root/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export QT_PLUGIN_PATH="$root/usr/plugins"
+export QML2_IMPORT_PATH="$root/usr/qml"
+exec "$root/usr/bin/aurora" "$@"
+EOF
+chmod +x "$deploy/aurora.sh"
+python3 scripts/verify-arm64.py --root "$deploy" --executable "$deploy/usr/bin/aurora" --platform linux --report "$deploy/architecture.json"
+ldd "$deploy/usr/bin/aurora" | tee "$deploy/dependencies.txt"
+if grep -q 'not found' "$deploy/dependencies.txt"; then exit 1; fi
+tar -C build -czf build/Aurora-Linux-aarch64.tar.gz Aurora-Linux-aarch64
+(cd build && sha256sum Aurora-Linux-aarch64.tar.gz > Aurora-Linux-aarch64.tar.gz.sha256)

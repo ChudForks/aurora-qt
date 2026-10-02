@@ -1,0 +1,149 @@
+name: ARM64 packages
+on:
+  workflow_dispatch:
+  push:
+    branches: [arm64-pyrowave]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-11-arm
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          architecture: arm64
+      - name: Native toolchain
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: arm64
+      - name: Qt ARM64
+        shell: pwsh
+        run: |
+          python -m pip install aqtinstall==3.3.0
+          if ($LASTEXITCODE) { throw 'aqt installation failed' }
+          python -m aqt install-qt windows_arm64 desktop 6.11.1 win64_msvc2022_arm64 -O C:/Qt -m qtsvg
+          if ($LASTEXITCODE) { throw 'Qt installation failed' }
+      - name: Native dependencies
+        shell: pwsh
+        run: ./setup-deps.ps1
+      - uses: actions/checkout@v5
+        with:
+          repository: KhronosGroup/glslang
+          ref: 16.6.0
+          path: deps/glslang
+      - name: Native shader compiler and optimizer
+        shell: pwsh
+        run: |
+          Set-Location deps/glslang
+          python update_glslang_sources.py
+          if ($LASTEXITCODE) { throw 'glslang dependencies failed' }
+          cmake -S . -B build -A ARM64 -DENABLE_OPT=ON -DENABLE_GLSLANG_BINARIES=ON
+          if ($LASTEXITCODE) { throw 'glslang configure failed' }
+          cmake --build build --config Release --parallel 4 --target glslang-standalone spirv-opt spirv-val
+          if ($LASTEXITCODE) { throw 'glslang build failed' }
+          Get-ChildItem build -Recurse -Filter spirv-opt.exe | ForEach-Object { $_.DirectoryName } | Add-Content $env:GITHUB_PATH
+      - uses: actions/checkout@v5
+        with:
+          repository: KhronosGroup/Vulkan-Loader
+          ref: v1.4.313
+          path: deps/loader
+      - name: Native Vulkan loader
+        shell: pwsh
+        run: |
+          cmake -S deps/loader -B deps/loader/build -A ARM64 -DUPDATE_DEPS=ON -DBUILD_TESTS=OFF
+          if ($LASTEXITCODE) { throw 'loader configure failed' }
+          cmake --build deps/loader/build --config Release --parallel 4
+          if ($LASTEXITCODE) { throw 'loader build failed' }
+      - name: Build and package
+        shell: pwsh
+        run: |
+          $glslang = (Get-ChildItem deps/glslang/build -Recurse -Filter glslang.exe | Select-Object -First 1).FullName
+          $loader = (Get-ChildItem deps/loader/build -Recurse -Filter vulkan-1.dll | Select-Object -First 1).FullName
+          ./scripts/build-arm64-windows.ps1 -QtRoot C:/Qt/6.11.1/msvc2022_arm64 -Loader $loader -Glslang $glslang
+      - name: Native startup smoke test
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = 'offscreen'
+          $p = Start-Process build/Aurora-Windows-ARM64/Aurora.exe -PassThru -WindowStyle Hidden -RedirectStandardOutput build/startup.stdout -RedirectStandardError build/startup.stderr
+          Start-Sleep -Seconds 15
+          if ($p.HasExited) { Get-Content build/startup.stderr; throw "GUI exited early: $($p.ExitCode)" }
+          Stop-Process -Id $p.Id
+          'Native ARM64 process remained running for 15s with offscreen Qt. GPU/streaming unverified.' | Set-Content build/startup-result.txt
+      - uses: actions/upload-artifact@v6
+        with:
+          name: Aurora-Windows-ARM64
+          path: |
+            build/Aurora-Windows-ARM64.zip
+            build/Aurora-Windows-ARM64.zip.sha256
+            build/startup*
+          if-no-files-found: error
+      - name: Diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: Windows-build-diagnostics
+          path: |
+            build/arm64-release/**/Makefile*
+            build/startup*
+          if-no-files-found: warn
+  linux:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential qt6-base-dev qt6-declarative-dev libqt6svg6-dev qt6-tools-dev-tools qt6-l10n-tools \
+            qml6-module-qtquick-controls qml6-module-qtquick-templates qml6-module-qtquick-layouts qml6-module-qtqml-workerscript \
+            qml6-module-qtquick-window qml6-module-qtquick qml6-module-qtquick-dialogs qml6-module-qtqml-models \
+            libsdl2-dev libsdl2-ttf-dev libssl-dev libopus-dev libavcodec-dev libavutil-dev libswscale-dev libplacebo-dev \
+            libva-dev libvdpau-dev libdrm-dev libegl1-mesa-dev libgl-dev libwayland-dev libx11-dev libvulkan-dev \
+            glslang-tools spirv-tools python3 xvfb vulkan-tools mesa-vulkan-drivers
+          dpkg-query -W > dependency-versions.txt
+      - name: ARM64 packaging tools
+        run: |
+          mkdir -p tools
+          curl -fL https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-aarch64.AppImage -o tools/linuxdeploy-aarch64.AppImage
+          curl -fL https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-aarch64.AppImage -o tools/linuxdeploy-plugin-qt-aarch64.AppImage
+          chmod +x tools/*.AppImage
+          sha256sum tools/*.AppImage > packaging-tools.sha256
+          echo "$PWD/tools" >> "$GITHUB_PATH"
+      - name: Build and package
+        run: bash scripts/build-arm64-linux.sh
+      - name: Native GUI startup smoke test
+        run: |
+          set +e
+          timeout 15s xvfb-run -a build/Aurora-Linux-aarch64/aurora.sh > build/startup.log 2>&1
+          result=$?
+          set -e
+          cat build/startup.log
+          test "$result" = 124
+          echo 'Native ARM64 GUI remained running for 15s under Xvfb. GPU/streaming unverified.' > build/startup-result.txt
+      - uses: actions/upload-artifact@v6
+        with:
+          name: Aurora-Linux-aarch64
+          path: |
+            build/Aurora-Linux-aarch64.tar.gz
+            build/Aurora-Linux-aarch64.tar.gz.sha256
+            build/startup*
+            dependency-versions.txt
+            packaging-tools.sha256
+          if-no-files-found: error
+      - name: Diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: Linux-build-diagnostics
+          path: |
+            build/arm64-release/**/Makefile*
+            build/startup*
+            dependency-versions.txt
+          if-no-files-found: warn
