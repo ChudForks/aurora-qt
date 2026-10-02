@@ -23,7 +23,7 @@ DEFINES += VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 # MSVC defaults to a non-conformant preprocessor that rejects __VA_OPT__ (used by
 # the CHECK_VK macro in src/vk/check.h). Opt into the standards-conforming one.
 # Also silence the CRT "unsafe" warning for std::getenv used in pyrowave_common.cpp.
-win32-msvc {
+*-msvc {
     QMAKE_CFLAGS   += /Zc:preprocessor
     QMAKE_CXXFLAGS += /Zc:preprocessor
     DEFINES += _CRT_SECURE_NO_WARNINGS
