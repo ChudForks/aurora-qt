@@ -22,6 +22,7 @@ gpg --homedir "$PWD/gnupg" --status-fd 1 --verify rootfs.tar.gz.sig rootfs.tar.g
 grep -q 'VALIDSIG 68B3537F39A313B3E574D06777193F152BDBE6A6' "$results/rootfs-signature.txt"
 sha256sum rootfs.tar.gz > "$results/rootfs.sha256"
 sudo tar --numeric-owner -xpf rootfs.tar.gz -C "$arch_root"
+sudo mount --bind "$arch_root" "$arch_root"
 sudo mkdir -p "$arch_root/proc" "$arch_root/dev" "$arch_root/sys" "$arch_root/test-results" "$arch_root/opt/aurora-test"
 # Replace the image's absolute systemd-resolved symlink within this root only.
 sudo rm -f "$arch_root/etc/resolv.conf"
@@ -33,10 +34,12 @@ sudo mount --rbind /sys "$arch_root/sys"
 sudo mount --make-rslave "$arch_root/sys"
 sudo mount --bind "$results" "$arch_root/test-results"
 cleanup() {
+  sudo chroot "$arch_root" /usr/bin/gpgconf --kill all || true
   sudo umount "$arch_root/test-results" || true
   sudo umount -R "$arch_root/sys" || true
   sudo umount -R "$arch_root/dev" || true
   sudo umount "$arch_root/proc" || true
+  sudo umount "$arch_root" || true
   sudo chown -R "$(id -u):$(id -g)" "$results"
 }
 trap cleanup EXIT
