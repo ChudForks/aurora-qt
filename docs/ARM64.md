@@ -34,6 +34,17 @@ X11 and Wayland are compiled in. The archive does not require FUSE.
 
 ## Real-hardware validation procedure
 
+The intended host is VibePollo with PyroWave support. See
+VIBEPollo-COMPATIBILITY.md: negotiation matches, but its newer vendored bitstream
+has not been tested against this WiVRn-derived Aurora decoder. Use the friend's
+exact host version for the end-to-end test.
+
+The Linux package also includes `usr/bin/pyrowave-smoke`, which checks native
+wire layout and creates headless decoder shader pipelines. Exit 77 means the
+available Vulkan device cannot perform this test, not successful decoding.
+The result and device name are recorded in pyrowave-smoke.log. This test does
+not execute a streamed frame or validate swapchain presentation.
+
 1. Check the SHA-256 against the sidecar. On Windows run
    `Get-FileHash Aurora-Windows-ARM64.zip -Algorithm SHA256`; on Linux run
    `sha256sum -c Aurora-Linux-aarch64.tar.gz.sha256`.

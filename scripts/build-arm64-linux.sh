@@ -18,6 +18,7 @@ export QMAKE=qmake6 QML_SOURCES_PATHS="$source_root/app/gui" APPIMAGE_EXTRACT_AN
 linuxdeploy-aarch64.AppImage --appdir "$deploy" --executable "$deploy/usr/bin/aurora" --plugin qt
 mkdir -p "$deploy/licenses"
 cp LICENSE README.md docs/ARM64.md "$deploy/"
+cp docs/VIBEPollo-COMPATIBILITY.md "$deploy/"
 cp pyrowave/LICENSE* "$deploy/licenses/"
 cp pyrowave/external/vk_mem_alloc.h "$deploy/licenses/VulkanMemoryAllocator.h"
 cp pyrowave/src/vk/vk_allocator.cpp "$deploy/licenses/WiVRn-notices.cpp"

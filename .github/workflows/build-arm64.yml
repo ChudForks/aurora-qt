@@ -28,6 +28,7 @@ jobs:
           if ($LASTEXITCODE) { throw 'aqt installation failed' }
           python -m aqt install-qt windows_arm64 desktop 6.11.1 win64_msvc2022_arm64 -O C:/Qt
           if ($LASTEXITCODE) { throw 'Qt installation failed' }
+          python -m pip freeze > python-dependency-versions.txt
       - name: Native dependencies
         shell: pwsh
         run: ./setup-deps.ps1
@@ -104,7 +105,7 @@ jobs:
           sudo apt-get install -y build-essential qt6-base-dev qt6-declarative-dev libqt6svg6-dev qt6-tools-dev-tools qt6-l10n-tools \
             qml6-module-qtquick-controls qml6-module-qtquick-templates qml6-module-qtquick-layouts qml6-module-qtqml-workerscript \
             qml6-module-qtquick-window qml6-module-qtquick qml6-module-qtquick-dialogs qml6-module-qtqml-models \
-            libsdl2-dev libsdl2-ttf-dev libssl-dev libopus-dev libavcodec-dev libavutil-dev libswscale-dev libplacebo-dev \
+            libsdl2-dev libsdl2-ttf-dev libssl-dev libopus-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libplacebo-dev \
             libva-dev libvdpau-dev libdrm-dev libegl1-mesa-dev libgl-dev libwayland-dev libx11-dev libvulkan-dev \
             glslang-tools spirv-tools python3 xvfb vulkan-tools mesa-vulkan-drivers
           dpkg-query -W > dependency-versions.txt

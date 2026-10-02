@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import struct
+import os
 from pathlib import Path
 
 
@@ -42,9 +43,48 @@ def verify(root, executable, kind):
     for marker in (b'pyrowave: Vulkan context ready', b'idwt_0', b'wavelet'):
         if marker not in data:
             raise ValueError(f'PyroWave evidence missing in executable: {marker!r}')
+    if kind == 'windows' and os.name == 'nt':
+        import_check(root, binaries)
     return {'architecture': expected[0] + ' ARM64', 'binaries': binaries,
             'pyrowave_linked': True, 'sha256': hashlib.sha256(data).hexdigest(),
             'runtime_streaming_verified': False}
+
+
+def pe_imports(path):
+    data = path.read_bytes()
+    pe = struct.unpack_from('<I', data, 0x3c)[0]
+    sections = struct.unpack_from('<H', data, pe + 6)[0]
+    optional_size = struct.unpack_from('<H', data, pe + 20)[0]
+    optional = pe + 24
+    def offset(rva):
+        for index in range(sections):
+            section = optional + optional_size + index * 40
+            size, address, raw_size, raw = struct.unpack_from('<IIII', data, section + 8)
+            if address <= rva < address + max(size, raw_size):
+                return raw + rva - address
+        raise ValueError(f'Unmapped PE RVA {rva}: {path}')
+    import_rva = struct.unpack_from('<I', data, optional + 112 + 8)[0]
+    if not import_rva:
+        return []
+    imports = []
+    cursor = offset(import_rva)
+    while any(data[cursor:cursor + 20]):
+        name_rva = struct.unpack_from('<I', data, cursor + 12)[0]
+        name = offset(name_rva)
+        imports.append(data[name:data.index(b'\0', name)].decode('ascii').lower())
+        cursor += 20
+    return imports
+
+
+def import_check(root, binaries):
+    available = {Path(file).name.lower() for file in binaries}
+    system = Path(os.environ['SystemRoot']) / 'System32'
+    for file in binaries:
+        for dependency in pe_imports(root / file):
+            if dependency in available or dependency.startswith(('api-ms-', 'ext-ms-')):
+                continue
+            if not (system / dependency).is_file():
+                raise ValueError(f'Unresolved DLL {dependency} imported by {file}')
 
 
 if __name__ == '__main__':

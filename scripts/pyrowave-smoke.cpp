@@ -27,9 +27,9 @@ int main()
         std::cout << "UNVERIFIED: Vulkan context unavailable on this runner\n";
         return 77;
     }
-    std::cout << "GPU: " << context->phys_dev.getProperties().deviceName.data() << '\n';
+    std::cout << "GPU: " << context->physical_device().getProperties().deviceName.data() << '\n';
     try {
-        PyroWave::Decoder decoder(context->phys_dev, context->dev, 128, 128,
+        PyroWave::Decoder decoder(context->physical_device(), context->device(), 128, 128,
                                  PyroWave::ChromaSubsampling::Chroma420, true);
         PyroWave::DecoderInput input(decoder);
         std::cout << "PASS: PyroWave decoder and Vulkan shader pipelines initialized\n"
